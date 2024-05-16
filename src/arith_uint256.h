@@ -6,14 +6,14 @@
 #ifndef BITCOIN_ARITH_UINT256_H
 #define BITCOIN_ARITH_UINT256_H
 
-#include <assert.h>
 #include <cstring>
+#include <limits>
 #include <stdexcept>
 #include <stdint.h>
 #include <string>
-#include <vector>
 
 class uint256;
+class uint512;
 
 class uint_error : public std::runtime_error {
 public:
@@ -63,14 +63,6 @@ public:
     }
 
     explicit base_uint(const std::string& str);
-
-    bool operator!() const
-    {
-        for (int i = 0; i < WIDTH; i++)
-            if (pn[i] != 0)
-                return false;
-        return true;
-    }
 
     const base_uint operator~() const
     {
@@ -197,7 +189,7 @@ public:
     {
         // prefix operator
         int i = 0;
-        while (i < WIDTH && --pn[i] == (uint32_t)-1)
+        while (i < WIDTH && --pn[i] == std::numeric_limits<uint32_t>::max())
             i++;
         return *this;
     }
@@ -231,6 +223,9 @@ public:
     friend inline bool operator<=(const base_uint& a, const base_uint& b) { return a.CompareTo(b) <= 0; }
     friend inline bool operator==(const base_uint& a, uint64_t b) { return a.EqualTo(b); }
     friend inline bool operator!=(const base_uint& a, uint64_t b) { return !a.EqualTo(b); }
+
+    int GET_WIDTH() const;
+    uint32_t GET_PN(int index) const;
 
     std::string GetHex() const;
     void SetHex(const char* psz);
@@ -292,5 +287,33 @@ public:
 
 uint256 ArithToUint256(const arith_uint256 &);
 arith_uint256 UintToArith256(const uint256 &);
+
+uint256 ArithToUint256(const arith_uint256 &);
+arith_uint256 UintToArith256(const uint256 &);
+
+class arith_uint512 : public base_uint<512> {
+public:
+	arith_uint512() {}
+	arith_uint512(const base_uint<512>& b) : base_uint<512>(b) {}
+	arith_uint512(const arith_uint256& b) {
+		 for (int i = 0; i < b.GET_WIDTH(); i++)
+			pn[i] = b.GET_PN(i);
+	}
+	arith_uint512(uint64_t b) : base_uint<512>(b) {}
+	explicit arith_uint512(const std::string& str) : base_uint<512>(str) {}
+
+	arith_uint256 trim256() const {
+		arith_uint256 result;
+		memcpy((void*)&result, (void*)pn, 32);
+		return result;
+	}
+	friend uint512 ArithToUint512(const arith_uint512 &);
+	friend arith_uint512 UintToArith512(const uint512 &);
+	//std::string GetHex() const;
+
+};
+
+uint512 ArithToUint512(const arith_uint512 &);
+arith_uint512 UintToArith512(const uint512 &);
 
 #endif // BITCOIN_ARITH_UINT256_H
